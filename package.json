@@ -1,0 +1,19 @@
+{
+  "name": "libreria-backend",
+  "version": "1.0.0",
+  "description": "Backend Libreria Piquitos",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "author": "StarkTwo",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
