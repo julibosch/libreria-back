@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import db from './config/db.js'
 import cors from 'cors';
 import usuarioRoutes from './routes/usuarioRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
@@ -15,6 +16,7 @@ dotenv.config();
 db.authenticate()
   .then( () => console.log("base de datos conectada"))
   .catch( error => console.log(error))
+
 
 //Configuracion para Cors
 const dominiosPermitidos = [process.env.FRONTEND_URL,process.env.estefa_url];
@@ -31,6 +33,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use("/", usuarioRoutes);
+app.use("/admin", adminRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
