@@ -1,5 +1,5 @@
 import express from 'express';
-import { altaTipoArticulo } from '../controllers/tipoArticuloController.js';
+import { altaTipoArticulo, listadoTipoArticulo } from '../controllers/tipoArticuloController.js';
 
 const router = express.Router();
 
@@ -8,6 +8,7 @@ const router = express.Router();
 
 // Tipos de Articulo
 router.post('/tipos-de-articulo', altaTipoArticulo);
+router.get('/tipos-de-articulo', listadoTipoArticulo);
 
 // Proveedores
 

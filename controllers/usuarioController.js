@@ -15,7 +15,7 @@ const autenticarUsuario = async (req, res) => {
   });
   
   if (!usuarioEncontrado) {
-    const error = new Error("El socio no existe");
+    const error = new Error("El usuario no existe");
     return res.status(401).json({ msg: error.message });
   }
   return res.send(usuarioEncontrado.dataValues);

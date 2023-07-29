@@ -5,13 +5,23 @@ const altaTipoArticulo = async (req, res) => {
 
   try {
     const respuesta = await TipoArticulo.create({ descripcion });
-    return res.json("Tipo artículo creado correctamente");
+    return res.json({respuesta, msg:"Tipo artículo creado correctamente"});
   } catch (error) {
     console.error('Error al crear el tipo de artículo:', error);
     return res.status(401).json({ msg: error.message });
   }
 };
 
+const listadoTipoArticulo = async (req, res) => {
+  try {
+    const respuesta = await TipoArticulo.findAll();
+    res.json(respuesta);
+  } catch (error) {
+    return res.status(401).json({ msg: error.message });
+  }
+}
+
 export { 
-  altaTipoArticulo
+  altaTipoArticulo,
+  listadoTipoArticulo
 }
