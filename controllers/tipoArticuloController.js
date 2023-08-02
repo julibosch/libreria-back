@@ -21,7 +21,40 @@ const listadoTipoArticulo = async (req, res) => {
   }
 }
 
+const editarTipoArticulo = async (req, res) => {
+
+  const { id } = req.params;
+  let tipoArticulo;
+  try {
+    const { dataValues } = await TipoArticulo.findByPk(id);
+    tipoArticulo = dataValues;
+  } catch (error) {
+    return res.status(500).json({msg: "Problema de conexión, intentelo nuevamente"});
+  }
+
+  if (!tipoArticulo) {
+    return res.status(404).json({msg: "Tipo de articulo no encontrado"});
+  }
+
+  //Actualizo el objeto que viene de la base de datos, con el del body
+  tipoArticulo.descripcion = req.body.descripcion || tipoArticulo.descripcion;
+  
+  try {
+    const tipoArticuloActualizado = await TipoArticulo.update({
+      descripcion: tipoArticulo.descripcion
+    },{
+      where: {
+        id: id
+      }
+    });
+    console.log(tipoArticuloActualizado)
+  } catch (error) {
+    
+  }
+}
+
 export { 
   altaTipoArticulo,
-  listadoTipoArticulo
+  listadoTipoArticulo,
+  editarTipoArticulo
 }
