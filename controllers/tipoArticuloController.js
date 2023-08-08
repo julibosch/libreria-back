@@ -7,7 +7,7 @@ const altaTipoArticulo = async (req, res) => {
     const respuesta = await TipoArticulo.create({ descripcion });
     return res.json({respuesta, msg:"Tipo artículo creado correctamente"});
   } catch (error) {
-    console.error('Error al crear el tipo de artículo:', error);
+    
     return res.status(401).json({ msg: error.message });
   }
 };
@@ -20,16 +20,16 @@ const listadoTipoArticulo = async (req, res) => {
     return res.status(401).json({ msg: error.message });
   }
 }
-
+//!Consultar si validar que no se pueda tener dos tiposArticulos con el mismo nombre.
 const editarTipoArticulo = async (req, res) => {
-
   const { id } = req.params;
-  let tipoArticulo;
+  let tipoArticulo; //Contiene el objeto que viene de la bd.
+
   try {
     const { dataValues } = await TipoArticulo.findByPk(id);
     tipoArticulo = dataValues;
   } catch (error) {
-    return res.status(500).json({msg: "Problema de conexión, intentelo nuevamente"});
+    return res.status(500).json({msg: error.message});
   }
 
   if (!tipoArticulo) {
@@ -44,12 +44,19 @@ const editarTipoArticulo = async (req, res) => {
       descripcion: tipoArticulo.descripcion
     },{
       where: {
-        id: id
+        id: Number(tipoArticulo.id)
       }
     });
-    console.log(tipoArticuloActualizado)
-  } catch (error) {
     
+    // Comprobamos si se actualizó algún registro y devolvemos un objeto con dos propiedades, msg y tipo.
+    if (tipoArticuloActualizado > 0) {
+      return res.json({ msg: "Tipo de artículo actualizado exitosamente", tipo: { id, descripcion: tipoArticulo.descripcion }});
+    }
+
+    return res.status(300).json({ msg: "Nombre ya existente" });
+    
+  } catch (error) {
+    return res.status(401).json({ msg: error.message});
   }
 }
 

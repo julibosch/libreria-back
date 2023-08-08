@@ -30,7 +30,7 @@ const corsOptions = {
   }
 }
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 
 app.use("/", usuarioRoutes);
 app.use("/admin", adminRoutes);
