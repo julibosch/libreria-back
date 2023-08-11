@@ -20,8 +20,11 @@ const Articulo = db.define("articulos", {
   color: {
     type: Sequelize.STRING,
   },
-  rubro: {
-    type: Sequelize.STRING,
+  codigo_buscador: {
+    type: Sequelize.INTEGER
+  },
+  stock: {
+    type: Sequelize.INTEGER
   },
   id_tipoArticuloFK: {
     type: Sequelize.INTEGER,

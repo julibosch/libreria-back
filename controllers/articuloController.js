@@ -1,9 +1,11 @@
 import Articulo from "../models/Articulo.js";
+import TipoArticulo from "../models/TipoArticulo.js";
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
-
+  console.log("first");
   console.log(articulos);
+  return;
 
   //!Falta validar los tipos de articulos, osea cambiar el nombre por el numero de primaryKey. Falta validar que todos tengan Tipo, consultar como haemos el alta de todos
 
@@ -14,30 +16,54 @@ const altaExcelArticulo = async (req, res) => {
 
     res.status(200).json({ msg: "Artículos insertados con éxito" });
   } catch (error) {
-    console.error("Error al insertar los artículos:", error);
     res.status(500).json({ msg: "Hubo un error al insertar los artículos" });
   }
 };
 
 const altaArticulo = async (req, res) => {
-  let { descripcion, codigo_barra, precio, color, rubro, id_tipoArticuloFK } =
-    req.body;
+  const {
+    codigo,
+    descripcion,
+    precio,
+    codigoBarra,
+    tipoArticulo,
+    stock,
+    color,
+  } = req.body;
+  let id = ""; //Va a contener el id del tipo de articulo
 
-  if (!id_tipoArticuloFK) {
+  console.log(req.body);
+
+  if (!tipoArticulo) {
     return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
   }
 
-  id_tipoArticuloFK = 27; //Para que funque, hay que sacarlo.
+  //Nos traemos el id del tipo de articulo y ademas validamos que exista en la base de datos.
+  try {
+    const { dataValues } = await TipoArticulo.findOne({
+      where: {
+        descripcion: tipoArticulo,
+      },
+    });
 
-  //! Falta mapear la familia, osea tipo de articulo al id que le corresponde
+    id = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues
+
+    if (!id) {
+      return res.status(500).json({ msg: "No existe ese tipo de articulo" });
+    }
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+
   try {
     const resultados = await Articulo.create({
+      codigo_buscador: codigo,
       descripcion,
-      codigo_barra,
       precio,
+      codigo_barra: codigoBarra,
+      id_tipoArticuloFK: id,
+      stock,
       color,
-      rubro,
-      id_tipoArticuloFK,
     });
     res.status(200).json({ msg: "Artículo creado con exito" });
   } catch (error) {
@@ -92,10 +118,29 @@ const editarArticulo = async (req, res) => {
       return res.json({ msg: "Artículo actualizado exitosamente" });
     }
     return res.status(300).json({ msg: "No hubo modificaciones" });
-
   } catch (error) {
     return res.status(401).json({ msg: error.message });
   }
 };
 
-export { altaExcelArticulo, altaArticulo, editarArticulo };
+const listadoArticulo = async (req, res) => {
+  const consultaSQL = `
+    SELECT articulos.descripcion AS descripcion, color, precio, codigo_buscador, codigo_barra, stock,
+    tipo_articulos.descripcion AS tipoArticulo
+    FROM articulos
+    INNER JOIN tipo_articulos
+    ON articulos.id_tipoArticuloFK = tipo_articulos.id;
+  `;
+  try {
+   const respuesta = await Articulo.sequelize.query(consultaSQL, {
+      type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
+      include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
+    });
+    console.log(respuesta)
+    res.json(respuesta);
+  } catch (error) {
+    return res.status(401).json({ msg: error.message });
+  }
+};
+
+export { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo };
