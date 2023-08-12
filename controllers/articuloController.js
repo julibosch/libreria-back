@@ -21,18 +21,8 @@ const altaExcelArticulo = async (req, res) => {
 };
 
 const altaArticulo = async (req, res) => {
-  const {
-    codigo,
-    descripcion,
-    precio,
-    codigoBarra,
-    tipoArticulo,
-    stock,
-    color,
-  } = req.body;
+  const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
   let id = ""; //Va a contener el id del tipo de articulo
-
-  console.log(req.body);
 
   if (!tipoArticulo) {
     return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
@@ -46,7 +36,7 @@ const altaArticulo = async (req, res) => {
       },
     });
 
-    id = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues
+    id = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
 
     if (!id) {
       return res.status(500).json({ msg: "No existe ese tipo de articulo" });
@@ -56,7 +46,7 @@ const altaArticulo = async (req, res) => {
   }
 
   try {
-    const resultados = await Articulo.create({
+    const respuesta = await Articulo.create({
       codigo_buscador: codigo,
       descripcion,
       precio,
@@ -65,7 +55,7 @@ const altaArticulo = async (req, res) => {
       stock,
       color,
     });
-    res.status(200).json({ msg: "Artículo creado con exito" });
+    return res.json({ respuesta, msg: "Artículo creado con exito" });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
@@ -125,7 +115,7 @@ const editarArticulo = async (req, res) => {
 
 const listadoArticulo = async (req, res) => {
   const consultaSQL = `
-    SELECT articulos.descripcion AS descripcion, color, precio, codigo_buscador, codigo_barra, stock,
+    SELECT articulos.descripcion AS descripcion, articulos.id AS id, color, precio, codigo_buscador, codigo_barra, stock,
     tipo_articulos.descripcion AS tipoArticulo
     FROM articulos
     INNER JOIN tipo_articulos
@@ -136,7 +126,6 @@ const listadoArticulo = async (req, res) => {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
     });
-    console.log(respuesta)
     res.json(respuesta);
   } catch (error) {
     return res.status(401).json({ msg: error.message });
