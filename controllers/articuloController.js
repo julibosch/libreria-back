@@ -24,6 +24,7 @@ const altaArticulo = async (req, res) => {
   const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
   let id = ""; //Va a contener el id del tipo de articulo
 
+   console.log(tipoArticulo);
   if (!tipoArticulo) {
     return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
   }
@@ -51,9 +52,9 @@ const altaArticulo = async (req, res) => {
       descripcion,
       precio,
       codigo_barra: codigoBarra,
-      id_tipoArticuloFK: id,
       stock,
       color,
+      id_tipoArticuloFK: id
     });
     return res.json({ respuesta, msg: "Artículo creado con exito" });
   } catch (error) {
@@ -132,4 +133,23 @@ const listadoArticulo = async (req, res) => {
   }
 };
 
-export { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo };
+const eliminarArticulo = async (req, res) => {
+
+  if (!req.params) {
+    return res.status(500).json({msg: "No se envió ningún id"});
+  }
+
+  const id = Number(req.params.id);
+  try {
+    const respuesta = await Articulo.destroy({
+      where: {
+        id: id
+      },
+    });
+    return res.json({msg: "Artículo eliminado correctamente", respuesta});
+  } catch (error) {
+    return res.status(500).json({msg: error.message});
+  }
+}
+
+export { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo, eliminarArticulo };

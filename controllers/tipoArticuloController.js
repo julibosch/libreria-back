@@ -104,9 +104,31 @@ const editarTipoArticulo = async (req, res) => {
   }
 };
 
+// Eliminar un tipo de articulo
+const eliminarTipoArticulo = async (req, res) => {
+  if (!req.params) {
+    return res.status(500).json({msg: "No se envió ningún id"});
+  }
+
+  const id = Number(req.params.id);
+
+  try {
+    const respuesta = await TipoArticulo.destroy({
+      where: {
+        id: id
+      },
+    });
+    
+    return res.json({msg: "Tipo de articulo eliminado correctamente", respuesta});
+  } catch (error) {
+    return res.status(500).json({msg: error.message});
+  }
+}
+
 export {
   altaTipoArticulo,
   listadoTipoArticulo,
   editarTipoArticulo,
   altaTipoArticuloExcel,
+  eliminarTipoArticulo
 };
