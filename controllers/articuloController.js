@@ -22,9 +22,9 @@ const altaExcelArticulo = async (req, res) => {
 
 const altaArticulo = async (req, res) => {
   const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
-  let id = ""; //Va a contener el id del tipo de articulo
 
-   console.log(tipoArticulo);
+  let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
+
   if (!tipoArticulo) {
     return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
   }
@@ -37,9 +37,9 @@ const altaArticulo = async (req, res) => {
       },
     });
 
-    id = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
+    idTipoArticulo = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
 
-    if (!id) {
+    if (!idTipoArticulo) {
       return res.status(500).json({ msg: "No existe ese tipo de articulo" });
     }
   } catch (error) {
@@ -54,66 +54,100 @@ const altaArticulo = async (req, res) => {
       codigo_barra: codigoBarra,
       stock,
       color,
-      id_tipoArticuloFK: id
+      id_tipoArticuloFK: idTipoArticulo
     });
-    return res.json({ respuesta, msg: "Artículo creado con exito" });
+    return res.json({ respuesta, msg: "Artículo creado con exito", descripcionTipoArticulo: tipoArticulo });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
 };
 
+// EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
   const { id } = req.params;
-  let articulo; //Contiene el objeto que viene de la bd.
+  const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
+
+  let articulo = {}; //Contiene el objeto que obtengo de la bd.
+  let idTipoArticulo;
 
   try {
     const { dataValues } = await Articulo.findByPk(id);
     articulo = dataValues;
+
+    if (!articulo) {
+      return res.status(404).json({ msg: "Artículo no encontrado" });
+    }
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
 
-  if (!articulo) {
-    return res.status(404).json({ msg: "Artículo no encontrado" });
+  try {
+    const { dataValues } = await TipoArticulo.findOne({
+      where: {
+        descripcion: tipoArticulo,
+      },
+    });
+
+    idTipoArticulo = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
+
+    if (!idTipoArticulo) {
+      return res.status(500).json({ msg: "No existe ese tipo de articulo" });
+    }
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
   }
 
   //! Acá iria el mapeo o consulta a base de datos.
 
   //Actualizo el objeto que viene de la base de datos, con el del body
-  articulo.descripcion = req.body.descripcion || articulo.descripcion;
-  articulo.codigo_barra = req.body.codigo_barra || articulo.codigo_barra;
-  articulo.precio = req.body.precio || articulo.precio;
-  articulo.color = req.body.color || articulo.color;
-  articulo.rubro = req.body.rubro || articulo.rubro;
-  // articulo.id_tipoArticuloFK = req.body.id_tipoArticuloFK || articulo.id_tipoArticuloFK; //Cambiar si es que viene como familia y mapear al id.
-  articulo.id_tipoArticuloFK = 27; //Esto no va, va lo que esta comentado arriba
+  // articulo.descripcion = req.body.descripcion || articulo.descripcion;
+  // articulo.codigo_barra = req.body.codigo_barra || articulo.codigo_barra;
+  // articulo.precio = req.body.precio || articulo.precio;
+  // articulo.color = req.body.color || articulo.color;
+  // articulo.rubro = req.body.rubro || articulo.rubro;
+  // // articulo.id_tipoArticuloFK = req.body.id_tipoArticuloFK || articulo.id_tipoArticuloFK; //Cambiar si es que viene como familia y mapear al id.
+  // articulo.id_tipoArticuloFK = 27; //Esto no va, va lo que esta comentado arriba
 
   try {
-    const articuloActualizado = await Articulo.update(
+    const respuesta = await Articulo.update(
       {
-        descripcion: articulo.descripcion,
-        codigo_barra: articulo.codigo_barra,
-        precio: articulo.precio,
-        color: articulo.color,
-        rubro: articulo.rubro,
-        id_tipoArticuloFK: articulo.id_tipoArticuloFK,
+        codigo_buscador: codigo,
+        descripcion: descripcion,
+        codigo_barra: codigoBarra,
+        precio: precio,
+        color: color,
+        // tipoArticulo: tipoArticulo,
+        stock: stock,
+        id_tipoArticuloFK: idTipoArticulo
       },
       {
         where: {
-          id: Number(articulo.id),
+          id: Number(id),
         },
       }
     );
 
-    if (articuloActualizado > 0) {
-      return res.json({ msg: "Artículo actualizado exitosamente" });
+    const articuloActualizado = {
+      id: Number(id),
+      codigo_buscador: codigo,
+      descripcion: descripcion,
+      codigo_barra: codigoBarra,
+      precio: precio,
+      color: color,
+      tipoArticulo: tipoArticulo,
+      stock: Number(stock)
     }
-    return res.status(300).json({ msg: "No hubo modificaciones" });
+
+    if (respuesta > 0) {
+      return res.json({ msg: "Artículo actualizado exitosamente", articuloActualizado, respuesta });
+    }
+    return res.json({ msg: "No hubo modificaciones", respuesta });
   } catch (error) {
     return res.status(401).json({ msg: error.message });
   }
 };
 
+// LISTADO DE ARTICULOS
 const listadoArticulo = async (req, res) => {
   const consultaSQL = `
     SELECT articulos.descripcion AS descripcion, articulos.id AS id, color, precio, codigo_buscador, codigo_barra, stock,
@@ -123,7 +157,7 @@ const listadoArticulo = async (req, res) => {
     ON articulos.id_tipoArticuloFK = tipo_articulos.id;
   `;
   try {
-   const respuesta = await Articulo.sequelize.query(consultaSQL, {
+    const respuesta = await Articulo.sequelize.query(consultaSQL, {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
     });
@@ -134,9 +168,8 @@ const listadoArticulo = async (req, res) => {
 };
 
 const eliminarArticulo = async (req, res) => {
-
   if (!req.params) {
-    return res.status(500).json({msg: "No se envió ningún id"});
+    return res.status(500).json({ msg: "No se envió ningún id" });
   }
 
   const id = Number(req.params.id);
@@ -146,9 +179,9 @@ const eliminarArticulo = async (req, res) => {
         id: id
       },
     });
-    return res.json({msg: "Artículo eliminado correctamente", respuesta});
+    return res.json({ msg: "Artículo eliminado correctamente", respuesta });
   } catch (error) {
-    return res.status(500).json({msg: error.message});
+    return res.status(500).json({ msg: error.message });
   }
 }
 
