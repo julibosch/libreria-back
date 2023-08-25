@@ -96,7 +96,7 @@ const editarTipoArticulo = async (req, res) => {
     if (tipoArticuloActualizado > 0) {
       return res.json({
         msg: "Tipo de artículo actualizado exitosamente",
-        tipo: { id, descripcion: tipoArticulo.descripcion },
+        tipo: { id:Number(id), descripcion: tipoArticulo.descripcion },
       });
     }
   } catch (error) {
