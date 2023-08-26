@@ -3,25 +3,49 @@ import TipoArticulo from "../models/TipoArticulo.js";
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
-  console.log("first");
-  console.log(articulos);
-  return;
-
-  //!Falta validar los tipos de articulos, osea cambiar el nombre por el numero de primaryKey. Falta validar que todos tengan Tipo, consultar como haemos el alta de todos
 
   try {
-    // Insertar los artículos en la base de datos utilizando bulkCreate
-    const resultados = await Articulo.bulkCreate(articulos);
-    console.log(resultados);
+    const tipoArticulos = await TipoArticulo.findAll();
 
-    res.status(200).json({ msg: "Artículos insertados con éxito" });
+    //BUSCA SI EL ARTICULO.ID_TIPOARTICULOFK O FAMILIA ES IGUAL A LA DESCRIPCION DE LA TABLA DE TIPO DE ARTICULOS, ENTONCES DEVUELVE EL OBJETO Y REEMPLAZA ELTIPOARTICULO
+    // O FAMILIA POR EL ID, CASO CONTRARIO LO DEJA EN NULL PARA QUE NO DE ERROR.
+    const articulosMapeados = articulos.map((articulo) => {
+      const tipoArticuloEncontrado = tipoArticulos.find(
+        (tipo) => tipo.dataValues.descripcion === articulo.id_tipoArticuloFK
+      );
+
+      if (tipoArticuloEncontrado) {
+        return {
+          ...articulo,
+          id_tipoArticuloFK: Number(tipoArticuloEncontrado.dataValues.id),
+          precio: articulo.precio != null ? Number(articulo.precio) : null
+        };
+      }
+      return {
+        ...articulo,
+        id_tipoArticuloFK: null,
+        precio: articulo.precio != null ? Number(articulo.precio) : null
+      };
+    });
+
+    const resultados = await Articulo.bulkCreate(articulosMapeados);
+    console.log(resultados)
+    return res.status(200).json({ msg: "Artículos insertados con éxito" });
   } catch (error) {
-    res.status(500).json({ msg: "Hubo un error al insertar los artículos" });
+    return res.status(500).json({ msg: error.message });
   }
-};
+}
 
 const altaArticulo = async (req, res) => {
-  const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
+  const {
+    codigo,
+    descripcion,
+    precio,
+    codigoBarra,
+    tipoArticulo,
+    stock,
+    color,
+  } = req.body;
 
   let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
 
@@ -54,9 +78,13 @@ const altaArticulo = async (req, res) => {
       codigo_barra: codigoBarra,
       stock,
       color,
-      id_tipoArticuloFK: idTipoArticulo
+      id_tipoArticuloFK: idTipoArticulo,
     });
-    return res.json({ respuesta, msg: "Artículo creado con exito", descripcionTipoArticulo: tipoArticulo });
+    return res.json({
+      respuesta,
+      msg: "Artículo creado con exito",
+      descripcionTipoArticulo: tipoArticulo,
+    });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
@@ -65,7 +93,15 @@ const altaArticulo = async (req, res) => {
 // EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
   const { id } = req.params;
-  const { codigo, descripcion, precio, codigoBarra, tipoArticulo, stock, color } = req.body;
+  const {
+    codigo,
+    descripcion,
+    precio,
+    codigoBarra,
+    tipoArticulo,
+    stock,
+    color,
+  } = req.body;
 
   let articulo = {}; //Contiene el objeto que obtengo de la bd.
   let idTipoArticulo;
@@ -118,7 +154,7 @@ const editarArticulo = async (req, res) => {
         color: color,
         // tipoArticulo: tipoArticulo,
         stock: stock,
-        id_tipoArticuloFK: idTipoArticulo
+        id_tipoArticuloFK: idTipoArticulo,
       },
       {
         where: {
@@ -135,11 +171,15 @@ const editarArticulo = async (req, res) => {
       precio: precio,
       color: color,
       tipoArticulo: tipoArticulo,
-      stock: Number(stock)
-    }
+      stock: Number(stock),
+    };
 
     if (respuesta > 0) {
-      return res.json({ msg: "Artículo actualizado exitosamente", articuloActualizado, respuesta });
+      return res.json({
+        msg: "Artículo actualizado exitosamente",
+        articuloActualizado,
+        respuesta,
+      });
     }
     return res.json({ msg: "No hubo modificaciones", respuesta });
   } catch (error) {
@@ -176,13 +216,19 @@ const eliminarArticulo = async (req, res) => {
   try {
     const respuesta = await Articulo.destroy({
       where: {
-        id: id
+        id: id,
       },
     });
     return res.json({ msg: "Artículo eliminado correctamente", respuesta });
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
-}
+};
 
-export { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo, eliminarArticulo };
+export {
+  altaExcelArticulo,
+  altaArticulo,
+  editarArticulo,
+  listadoArticulo,
+  eliminarArticulo,
+};
