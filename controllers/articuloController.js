@@ -1,5 +1,6 @@
 import Articulo from "../models/Articulo.js";
 import TipoArticulo from "../models/TipoArticulo.js";
+import sequelize from "../config/db.js";
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
@@ -18,13 +19,13 @@ const altaExcelArticulo = async (req, res) => {
         return {
           ...articulo,
           id_tipoArticuloFK: Number(tipoArticuloEncontrado.dataValues.id),
-          precio: articulo.precio != null ? Number(articulo.precio) : null
+          precio: articulo.precio != null ? Number(articulo.precio / 1000) : null
         };
       }
       return {
         ...articulo,
         id_tipoArticuloFK: null,
-        precio: articulo.precio != null ? Number(articulo.precio) : null
+        precio: articulo.precio != null ? Number(articulo.precio / 1000) : null
       };
     });
 
@@ -133,17 +134,6 @@ const editarArticulo = async (req, res) => {
     return res.status(500).json({ msg: error.message });
   }
 
-  //! Acá iria el mapeo o consulta a base de datos.
-
-  //Actualizo el objeto que viene de la base de datos, con el del body
-  // articulo.descripcion = req.body.descripcion || articulo.descripcion;
-  // articulo.codigo_barra = req.body.codigo_barra || articulo.codigo_barra;
-  // articulo.precio = req.body.precio || articulo.precio;
-  // articulo.color = req.body.color || articulo.color;
-  // articulo.rubro = req.body.rubro || articulo.rubro;
-  // // articulo.id_tipoArticuloFK = req.body.id_tipoArticuloFK || articulo.id_tipoArticuloFK; //Cambiar si es que viene como familia y mapear al id.
-  // articulo.id_tipoArticuloFK = 27; //Esto no va, va lo que esta comentado arriba
-
   try {
     const respuesta = await Articulo.update(
       {
@@ -194,15 +184,19 @@ const listadoArticulo = async (req, res) => {
     tipo_articulos.descripcion AS tipoArticulo
     FROM articulos
     INNER JOIN tipo_articulos
-    ON articulos.id_tipoArticuloFK = tipo_articulos.id;
+    ON articulos.id_tipoArticuloFK = tipo_articulos.id
+    group by codigo_buscador
+    ;
   `;
   try {
+    await sequelize.query("SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
     const respuesta = await Articulo.sequelize.query(consultaSQL, {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
     });
     res.json(respuesta);
   } catch (error) {
+    console.log(error)
     return res.status(401).json({ msg: error.message });
   }
 };
