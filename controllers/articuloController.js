@@ -30,8 +30,8 @@ const altaExcelArticulo = async (req, res) => {
     });
 
     const resultados = await Articulo.bulkCreate(articulosMapeados);
-    console.log(resultados)
-    return res.status(200).json({ msg: "Artículos insertados con éxito" });
+
+    return res.status(200).json({ msg: "Artículos insertados con éxito", resultados });
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
@@ -219,10 +219,21 @@ const eliminarArticulo = async (req, res) => {
   }
 };
 
+const actualizarPrecios = async (req, res) => {
+  const articulosFront = req.body;
+
+  try {
+    return res.json({msg: "Artículos actualizados exitosamente!", articulosFront});
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+}
+
 export {
   altaExcelArticulo,
   altaArticulo,
   editarArticulo,
   listadoArticulo,
   eliminarArticulo,
+  actualizarPrecios,
 };

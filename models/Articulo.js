@@ -12,16 +12,16 @@ const Articulo = db.define("articulos", {
     type: Sequelize.STRING,
   },
   codigo_barra: {
-    type: Sequelize.FLOAT,
+    type: Sequelize.STRING,
   },
   precio: {
-    type: Sequelize.DECIMAL(18, 2),
+    type: Sequelize.DECIMAL(18, 3),
   },
   color: {
     type: Sequelize.STRING,
   },
   codigo_buscador: {
-    type: Sequelize.INTEGER
+    type: Sequelize.STRING
   },
   stock: {
     type: Sequelize.INTEGER
