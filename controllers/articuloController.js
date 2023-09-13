@@ -112,7 +112,7 @@ const editarArticulo = async (req, res) => {
         codigo_buscador: codigo
       }
     });
-    
+
     if (!respuesta) {
       return res.status(404).json({ msg: "Artículo no encontrado" });
     }
@@ -278,7 +278,7 @@ const articuloExcelEditar = async (req, res) => {
     await transaccion.commit();
 
     // Si llegas a este punto, significa que todas las actualizaciones se realizaron con éxito
-    return res.status(200).json({ msg: `Artículos actualizados con éxito.` });
+    return res.status(200).json({ msg: `Artículos actualizados con éxito.`, updates });
   } catch (error) {
     // Si ocurre un error, hacer un rollback de la transacción para deshacer todas las actualizaciones
     await transaccion.rollback();
@@ -291,7 +291,7 @@ const actualizarPrecios = async (req, res) => {
   const articulosFront = req.body;
 
   try {
-    return res.json({msg: "Artículos actualizados exitosamente!", articulosFront});
+    return res.json({ msg: "Artículos actualizados exitosamente!", articulosFront });
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
