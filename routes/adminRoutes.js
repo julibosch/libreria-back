@@ -1,6 +1,6 @@
 import express from 'express';
 import { altaTipoArticulo, listadoTipoArticulo, editarTipoArticulo, altaTipoArticuloExcel, eliminarTipoArticulo } from '../controllers/tipoArticuloController.js';
-import { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo, eliminarArticulo, actualizarPrecios } from '../controllers/articuloController.js';
+import { altaExcelArticulo, altaArticulo, editarArticulo, listadoArticulo, eliminarArticulo, articuloExcelEditar, actualizarPrecios } from '../controllers/articuloController.js';
 
 const router = express.Router();
 
@@ -8,7 +8,8 @@ const router = express.Router();
 router.post('/articuloExcel', altaExcelArticulo);
 router.post('/articulo', altaArticulo);
 router.post('/articulo/actualizar-precio', actualizarPrecios);
-router.put('/articulo/:id', editarArticulo);
+router.put('/articulo/:codigo', editarArticulo);
+router.put('/articuloExcelEditar', articuloExcelEditar);
 router.get('/articulo', listadoArticulo);
 router.delete('/articulo/:id', eliminarArticulo);
 

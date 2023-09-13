@@ -93,9 +93,8 @@ const altaArticulo = async (req, res) => {
 
 // EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
-  const { id } = req.params;
+  const { codigo } = req.params;
   const {
-    codigo,
     descripcion,
     precio,
     codigoBarra,
@@ -104,14 +103,17 @@ const editarArticulo = async (req, res) => {
     color,
   } = req.body;
 
-  let articulo = {}; //Contiene el objeto que obtengo de la bd.
   let idTipoArticulo;
 
   try {
-    const { dataValues } = await Articulo.findByPk(id);
-    articulo = dataValues;
 
-    if (!articulo) {
+    const respuesta = await Articulo.findAll({
+      where: {
+        codigo_buscador: codigo
+      }
+    });
+    
+    if (!respuesta) {
       return res.status(404).json({ msg: "Artículo no encontrado" });
     }
   } catch (error) {
@@ -142,16 +144,35 @@ const editarArticulo = async (req, res) => {
         codigo_barra: codigoBarra,
         precio: precio,
         color: color,
-        // tipoArticulo: tipoArticulo,
         stock: stock,
         id_tipoArticuloFK: idTipoArticulo,
       },
       {
         where: {
-          id: Number(id),
+          codigo: codigo,
         },
       }
     );
+
+    // const updates = articulos.map(async (articulo) => {
+    //   precioRedondeado = parseFloat(articulo.precio).toFixed(3);
+    //   await Articulo.update(
+    //     {
+    //       precio: precioRedondeado,
+    //       descripcion: articulo.descripcion,
+    //       codigo_barra: articulo.codigo_barra,
+    //       color: articulo.color,
+    //       stock: articulo.stock,
+    //       id_tipoArticuloFK: articulo.id_tipoArticuloFK,
+    //     },
+    //     {
+    //       where: {
+    //         codigo: articulo.codigo, // Usamos el código del artículo para identificarlo
+    //       },
+    //       transaction: transaccion, // Asociar la transacción a la actualización
+    //     }
+    //   );
+    // });
 
     const articuloActualizado = {
       id: Number(id),
@@ -219,6 +240,53 @@ const eliminarArticulo = async (req, res) => {
   }
 };
 
+const articuloExcelEditar = async (req, res) => {
+  const articulos = req.body;
+
+  //Si algun articulo viene sin codigo retorna con el mensaje al front
+  for (const articulo of articulos) {
+    if (!articulo.codigo) {
+      return res.status(500).json({ msg: `Hay un artículo sin codigo, no se pudo actualizar.` });
+    }
+  }
+
+  // Iniciar una transacción
+  const transaccion = await sequelize.transaction();
+  let precioRedondeado = 0;
+
+  try {
+    // Mapear las actualizaciones en un arreglo de promesas, asi es mas rapido y no actualiza uno por uno
+    const updates = articulos.map(async (articulo) => {
+      precioRedondeado = parseFloat(articulo.precio).toFixed(3);
+      await Articulo.update(
+        {
+          precio: precioRedondeado,
+        },
+        {
+          where: {
+            codigo_buscador: articulo.codigo,
+          },
+          transaction: transaccion, // Asociar la transacción a la actualización
+        }
+      );
+    });
+
+    // Esperar a que se completen todas las actualizaciones en paralelo
+    await Promise.all(updates);
+
+    // Confirmar la transacción (todas las actualizaciones se aplicarán)
+    await transaccion.commit();
+
+    // Si llegas a este punto, significa que todas las actualizaciones se realizaron con éxito
+    return res.status(200).json({ msg: `Artículos actualizados con éxito.` });
+  } catch (error) {
+    // Si ocurre un error, hacer un rollback de la transacción para deshacer todas las actualizaciones
+    await transaccion.rollback();
+    console.log(error);
+    return res.status(500).json({ msg: error.message });
+  }
+}
+
 const actualizarPrecios = async (req, res) => {
   const articulosFront = req.body;
 
@@ -235,5 +303,6 @@ export {
   editarArticulo,
   listadoArticulo,
   eliminarArticulo,
+  articuloExcelEditar,
   actualizarPrecios,
 };
