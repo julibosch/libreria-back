@@ -149,37 +149,16 @@ const editarArticulo = async (req, res) => {
       },
       {
         where: {
-          codigo: codigo,
+          codigo_buscador: codigo,
         },
       }
     );
 
-    // const updates = articulos.map(async (articulo) => {
-    //   precioRedondeado = parseFloat(articulo.precio).toFixed(3);
-    //   await Articulo.update(
-    //     {
-    //       precio: precioRedondeado,
-    //       descripcion: articulo.descripcion,
-    //       codigo_barra: articulo.codigo_barra,
-    //       color: articulo.color,
-    //       stock: articulo.stock,
-    //       id_tipoArticuloFK: articulo.id_tipoArticuloFK,
-    //     },
-    //     {
-    //       where: {
-    //         codigo: articulo.codigo, // Usamos el código del artículo para identificarlo
-    //       },
-    //       transaction: transaccion, // Asociar la transacción a la actualización
-    //     }
-    //   );
-    // });
-
     const articuloActualizado = {
-      id: Number(id),
       codigo_buscador: codigo,
       descripcion: descripcion,
       codigo_barra: codigoBarra,
-      precio: precio,
+      precio: parseFloat(precio).toFixed(3),
       color: color,
       tipoArticulo: tipoArticulo,
       stock: Number(stock),
@@ -194,6 +173,7 @@ const editarArticulo = async (req, res) => {
     }
     return res.json({ msg: "No hubo modificaciones", respuesta });
   } catch (error) {
+    console.log(error)
     return res.status(401).json({ msg: error.message });
   }
 };
@@ -225,14 +205,14 @@ const listadoArticulo = async (req, res) => {
 // Eliminar un articulo desde la tabla
 const eliminarArticulo = async (req, res) => {
   if (!req.params) {
-    return res.status(500).json({ msg: "No se envió ningún id" });
+    return res.status(500).json({ msg: "No se envió ningún codigo" });
   }
 
-  const id = Number(req.params.id);
+  const codigo_buscador = req.params.codigo_buscador;
   try {
     const respuesta = await Articulo.destroy({
       where: {
-        id: id,
+        codigo_buscador: codigo_buscador
       },
     });
     return res.json({ msg: "Artículo eliminado correctamente", respuesta });
@@ -324,7 +304,7 @@ const actualizarPrecios = async (req, res) => {
 
     return res.json({msg: "Los articulos se actualizaron exitosamente!", updates});
   } catch (error) {
-    return res.status(500).json({ msg: error.message });
+    return res.status(500).json({ msg: error.message, error });
   }
 }
 

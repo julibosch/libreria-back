@@ -11,7 +11,7 @@ router.post('/articulo/actualizar-precio', actualizarPrecios);
 router.put('/articulo/:codigo', editarArticulo);
 router.put('/articuloExcelEditar', articuloExcelEditar);
 router.get('/articulo', listadoArticulo);
-router.delete('/articulo/:id', eliminarArticulo);
+router.delete('/articulo/:codigo_buscador', eliminarArticulo);
 
 // Tipos de Articulo
 router.post('/tipos-de-articulo', altaTipoArticulo);
