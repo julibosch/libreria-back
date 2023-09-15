@@ -278,6 +278,9 @@ const articuloExcelEditar = async (req, res) => {
 const actualizarPrecios = async (req, res) => {
   const articulosFront = req.body;
 
+    // Iniciar una transacción
+  const transaccion = await sequelize.transaction();
+
   const articulos_a_modificar = articulosFront.map(articulo => {
     return {
       id: articulo.id,
@@ -296,14 +299,21 @@ const actualizarPrecios = async (req, res) => {
           where: {
             codigo_buscador: articulo.codigo_buscador // Selecciono los registros que coinciden con los códigos que vienen desde el front
           },
+          transaction: transaccion, // Asociar la transacción a la actualización
         }
       );
 
+      // Confirmar la transacción (todas las actualizaciones se aplicarán)
+      
       return articulo;
     }));
-
+  
+    await transaccion.commit();
+    
     return res.json({msg: "Los articulos se actualizaron exitosamente!", updates});
   } catch (error) {
+    console.log(error)
+    await transaccion.rollback();
     return res.status(500).json({ msg: error.message, error });
   }
 }
