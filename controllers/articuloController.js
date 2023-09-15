@@ -217,11 +217,12 @@ const listadoArticulo = async (req, res) => {
     });
     res.json(respuesta);
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(401).json({ msg: error.message });
   }
 };
 
+// Eliminar un articulo desde la tabla
 const eliminarArticulo = async (req, res) => {
   if (!req.params) {
     return res.status(500).json({ msg: "No se envió ningún id" });
@@ -240,6 +241,7 @@ const eliminarArticulo = async (req, res) => {
   }
 };
 
+// Actualizacion masiva de importes mediante excel
 const articuloExcelEditar = async (req, res) => {
   const articulos = req.body;
 
@@ -252,12 +254,11 @@ const articuloExcelEditar = async (req, res) => {
 
   // Iniciar una transacción
   const transaccion = await sequelize.transaction();
-  let precioRedondeado = 0;
 
   try {
     // Mapear las actualizaciones en un arreglo de promesas, asi es mas rapido y no actualiza uno por uno
-    const updates = articulos.map(async (articulo) => {
-      precioRedondeado = parseFloat(articulo.precio).toFixed(3);
+    const updates = await Promise.all(articulos.map(async (articulo) => {
+      const precioRedondeado = parseFloat(articulo.precio).toFixed(3);
       await Articulo.update(
         {
           precio: precioRedondeado,
@@ -269,15 +270,21 @@ const articuloExcelEditar = async (req, res) => {
           transaction: transaccion, // Asociar la transacción a la actualización
         }
       );
-    });
 
+      return {
+        ...articulo,
+        precio: precioRedondeado
+      };
+    }));
     // Esperar a que se completen todas las actualizaciones en paralelo
-    await Promise.all(updates);
-
+    // await Promise.all(updates);
+    
     // Confirmar la transacción (todas las actualizaciones se aplicarán)
     await transaccion.commit();
 
     // Si llegas a este punto, significa que todas las actualizaciones se realizaron con éxito
+
+    // Aca, updates es un arreglo de promesas, por lo que no te va a devolver nada para devolver al front, en ese caso se tendria que poner un return articulo dentro del .map
     return res.status(200).json({ msg: `Artículos actualizados con éxito.`, updates });
   } catch (error) {
     // Si ocurre un error, hacer un rollback de la transacción para deshacer todas las actualizaciones
@@ -287,11 +294,35 @@ const articuloExcelEditar = async (req, res) => {
   }
 }
 
+// Actualizar los importes desde boton
 const actualizarPrecios = async (req, res) => {
   const articulosFront = req.body;
 
+  const articulos_a_modificar = articulosFront.map(articulo => {
+    return {
+      id: articulo.id,
+      codigo_buscador: articulo.codigo_buscador,
+      precio: articulo.precio
+    }
+  });
+
   try {
-    return res.json({ msg: "Artículos actualizados exitosamente!", articulosFront });
+    const updates = await Promise.all(articulos_a_modificar.map(async (articulo) => {
+      await Articulo.update(
+        {
+          precio: articulo.precio // Nuevo precio que viene desde el front
+        },
+        {
+          where: {
+            codigo_buscador: articulo.codigo_buscador // Selecciono los registros que coinciden con los códigos que vienen desde el front
+          },
+        }
+      );
+
+      return articulo;
+    }));
+
+    return res.json({msg: "Los articulos se actualizaron exitosamente!", updates});
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
