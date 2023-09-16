@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config(); 
 
-const db = new Sequelize(process.env.DB_NAME, process.env.DB_USER_ESTEFA , process.env.DB_PASSWORD_ESTEFA,{
-  host: '127.0.0.1',
-  port: '3307',
+const db = new Sequelize(process.env.DB_NAME, process.env.DB_USER , process.env.DB_PASSWORD,{
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
   dialect: 'mysql',
   define: {
     timestamps: false

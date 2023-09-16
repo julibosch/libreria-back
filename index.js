@@ -35,8 +35,8 @@ app.use(cors(corsOptions));
 app.use("/", usuarioRoutes);
 app.use("/admin", adminRoutes);
 
-// Configura el tiempo de espera en 30 segundos (30000 milisegundos)
-app.timeout = 50000;
+// Configura el tiempo de espera en 60 segundos (60000 milisegundos)
+app.timeout = 60000;
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
