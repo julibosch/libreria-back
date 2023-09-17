@@ -14,23 +14,16 @@ dotenv.config();
 
 //Conectar base de datos
 db.authenticate()
-  .then( () => console.log("base de datos conectada"))
-  .catch( error => console.log(error))
-
+  .then(() => console.log("base de datos conectada con exito"))
+  .catch(error => console.log(error))
+;
 
 //Configuracion para Cors
-const dominiosPermitidos = [process.env.FRONTEND_URL,process.env.estefa_url];
-const corsOptions = {
-  origin: (origin,callback) => {
-    if (dominiosPermitidos.indexOf(origin) !== -1) {
-      callback(null,true)
-    }else{
-      callback(new Error("No permitido por cors"))
-    }
-  }
-}
-
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true
+}));
 
 app.use("/", usuarioRoutes);
 app.use("/admin", adminRoutes);
@@ -40,6 +33,6 @@ app.timeout = 60000;
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Servidor funcando en el puerto: http://localhost:${PORT}`);
-})
+  console.log(`Servidor funcionando en la URL: ${process.env.DB_HOST}:${PORT}`);
+});
 
