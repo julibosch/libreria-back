@@ -245,7 +245,7 @@ const articuloExcelEditar = async (req, res) => {
         },
         {
           where: {
-            codigo_buscador: articulo.codigo,
+            codigo_buscador: String(articulo.codigo),
           },
           transaction: transaccion, // Asociar la transacción a la actualización
         }
@@ -256,20 +256,17 @@ const articuloExcelEditar = async (req, res) => {
         precio: precioRedondeado
       };
     }));
-    // Esperar a que se completen todas las actualizaciones en paralelo
-    // await Promise.all(updates);
     
     // Confirmar la transacción (todas las actualizaciones se aplicarán)
     await transaccion.commit();
-
     // Si llegas a este punto, significa que todas las actualizaciones se realizaron con éxito
 
     // Aca, updates es un arreglo de promesas, por lo que no te va a devolver nada para devolver al front, en ese caso se tendria que poner un return articulo dentro del .map
     return res.status(200).json({ msg: `Artículos actualizados con éxito.`, updates });
   } catch (error) {
     // Si ocurre un error, hacer un rollback de la transacción para deshacer todas las actualizaciones
-    await transaccion.rollback();
     console.log(error);
+    await transaccion.rollback();
     return res.status(500).json({ msg: error.message });
   }
 }
