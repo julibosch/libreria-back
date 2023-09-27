@@ -48,6 +48,20 @@ const altaArticulo = async (req, res) => {
     color,
   } = req.body;
 
+  try {
+    const articuloEncontrado = await Articulo.findOne({
+      where: {
+        codigo_buscador: String(codigo),
+      },
+    });
+    
+    if (articuloEncontrado) {
+       return res.status(401).json({ msg: "Ya existe un artículo con ese código." });
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  console.log("siguio")
   let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
 
   if (!tipoArticulo) {
@@ -315,6 +329,46 @@ const actualizarPrecios = async (req, res) => {
   }
 }
 
+const buscarCodigoBarra = async (req, res) => {
+  const { filtro: codigo_barra } = req.body; //Viene como filtro pero se pasa a codigoBarra
+  
+  try {
+    const respuesta = await Articulo.findOne({
+      where: {
+        codigo_barra: codigo_barra
+      },
+    })
+
+    if (!respuesta) {
+      return res.json({msg: "El código de barra no existe"})
+    }
+
+    //Se trae la descripcion del tipo de articulo
+    const respuestaTipo = await TipoArticulo.findOne({
+      where: {
+        id: respuesta.dataValues.id_tipoArticuloFK
+      },
+    })
+    
+    //Este articulo se devuelve al front con el tipo de articulo de la descripcion
+    const articulo = {
+      id: respuesta.dataValues.id,
+      descripcion: respuesta.dataValues.descripcion,
+      codigo_barra: respuesta.dataValues.codigo_barra,
+      precio: respuesta.dataValues.precio,
+      color: respuesta.dataValues.color,
+      codigo_buscador: respuesta.dataValues.codigo_buscador,
+      stock: respuesta.dataValues.stock,
+      tipoArticulo: respuestaTipo.dataValues.descripcion
+    }
+
+    return res.json(articulo);
+  } catch (error) {
+    console.log(error)
+    return res.status(401).json({ msg: error.message });
+  }
+}
+
 export {
   altaExcelArticulo,
   altaArticulo,
@@ -323,4 +377,5 @@ export {
   eliminarArticulo,
   articuloExcelEditar,
   actualizarPrecios,
+  buscarCodigoBarra
 };
