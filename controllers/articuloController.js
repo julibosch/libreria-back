@@ -66,7 +66,7 @@ const altaArticulo = async (req, res) => {
   } catch (error) {
     console.log(error);
   }
-  console.log("siguio");
+
   let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
 
   if (!tipoArticulo) {
@@ -217,7 +217,7 @@ const listadoArticulo = async (req, res) => {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
     });
-    console.log(respuesta);
+
     res.json(respuesta);
   } catch (error) {
     console.log(error);
