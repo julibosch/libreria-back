@@ -166,7 +166,7 @@ const editarArticulo = async (req, res) => {
     );
 
     const articuloActualizado = {
-      codigo_buscador: codigo_buscador,
+      codigo_buscador: codigo,
       descripcion: descripcion,
       codigo_barra: codigoBarra,
       precio: parseFloat(precio).toFixed(3),
