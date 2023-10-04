@@ -19,23 +19,26 @@ const altaExcelArticulo = async (req, res) => {
         return {
           ...articulo,
           id_tipoArticuloFK: Number(tipoArticuloEncontrado.dataValues.id),
-          precio: articulo.precio != null ? Number(articulo.precio / 1000) : null
+          precio:
+            articulo.precio != null ? Number(articulo.precio / 1000) : null,
         };
       }
       return {
         ...articulo,
         id_tipoArticuloFK: null,
-        precio: articulo.precio != null ? Number(articulo.precio / 1000) : null
+        precio: articulo.precio != null ? Number(articulo.precio / 1000) : null,
       };
     });
 
     const resultados = await Articulo.bulkCreate(articulosMapeados);
 
-    return res.status(200).json({ msg: "Artículos insertados con éxito", resultados });
+    return res
+      .status(200)
+      .json({ msg: "Artículos insertados con éxito", resultados });
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
-}
+};
 
 const altaArticulo = async (req, res) => {
   const {
@@ -54,14 +57,16 @@ const altaArticulo = async (req, res) => {
         codigo_buscador: String(codigo),
       },
     });
-    
+
     if (articuloEncontrado) {
-       return res.status(401).json({ msg: "Ya existe un artículo con ese código." });
+      return res
+        .status(401)
+        .json({ msg: "Ya existe un artículo con ese código." });
     }
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
-  console.log("siguio")
+  console.log("siguio");
   let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
 
   if (!tipoArticulo) {
@@ -107,24 +112,17 @@ const altaArticulo = async (req, res) => {
 
 // EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
-  const { codigo } = req.params;
-  const {
-    descripcion,
-    precio,
-    codigoBarra,
-    tipoArticulo,
-    stock,
-    color,
-  } = req.body;
+  const { codigo } = req.params; //Codigo original
+  const { descripcion, precio, codigoBarra, tipoArticulo, stock, color } =
+    req.body;
 
   let idTipoArticulo;
 
   try {
-
     const respuesta = await Articulo.findAll({
       where: {
-        codigo_buscador: codigo
-      }
+        codigo_buscador: codigo,
+      },
     });
 
     if (!respuesta) {
@@ -153,7 +151,6 @@ const editarArticulo = async (req, res) => {
   try {
     const respuesta = await Articulo.update(
       {
-        codigo_buscador: codigo,
         descripcion: descripcion,
         codigo_barra: codigoBarra,
         precio: precio,
@@ -169,7 +166,7 @@ const editarArticulo = async (req, res) => {
     );
 
     const articuloActualizado = {
-      codigo_buscador: codigo,
+      codigo_buscador: codigo_buscador,
       descripcion: descripcion,
       codigo_barra: codigoBarra,
       precio: parseFloat(precio).toFixed(3),
@@ -187,7 +184,7 @@ const editarArticulo = async (req, res) => {
     }
     return res.json({ msg: "No hubo modificaciones", respuesta });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(401).json({ msg: error.message });
   }
 };
@@ -195,20 +192,32 @@ const editarArticulo = async (req, res) => {
 // LISTADO DE ARTICULOS
 const listadoArticulo = async (req, res) => {
   const consultaSQL = `
-    SELECT articulos.descripcion AS descripcion, articulos.id AS id, color, precio, codigo_buscador, codigo_barra, stock,
-    tipo_articulos.descripcion AS tipoArticulo
+    SELECT
+      articulos.descripcion AS descripcion,
+      articulos.id AS id,
+      color,
+      precio,
+      codigo_buscador,
+      codigo_barra,
+      stock,
+      tipo_articulos.descripcion AS tipoArticulo
     FROM articulos
     INNER JOIN tipo_articulos
     ON articulos.id_tipoArticuloFK = tipo_articulos.id
-    group by codigo_buscador
-    ;
+    GROUP BY codigo_buscador
+    ORDER BY
+    CAST(SUBSTRING_INDEX(codigo_buscador, ' ', 1) AS SIGNED) ASC,
+    SUBSTRING_INDEX(codigo_buscador, ' ', -1) ASC;
   `;
   try {
-    await sequelize.query("SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+    await sequelize.query(
+      "SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+    );
     const respuesta = await Articulo.sequelize.query(consultaSQL, {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
     });
+    console.log(respuesta);
     res.json(respuesta);
   } catch (error) {
     console.log(error);
@@ -226,7 +235,7 @@ const eliminarArticulo = async (req, res) => {
   try {
     const respuesta = await Articulo.destroy({
       where: {
-        codigo_buscador: codigo_buscador
+        codigo_buscador: codigo_buscador,
       },
     });
     return res.json({ msg: "Artículo eliminado correctamente", respuesta });
@@ -242,7 +251,9 @@ const articuloExcelEditar = async (req, res) => {
   //Si algun articulo viene sin codigo retorna con el mensaje al front
   for (const articulo of articulos) {
     if (!articulo.codigo) {
-      return res.status(500).json({ msg: `Hay un artículo sin codigo, no se pudo actualizar.` });
+      return res
+        .status(500)
+        .json({ msg: `Hay un artículo sin codigo, no se pudo actualizar.` });
     }
   }
 
@@ -251,105 +262,114 @@ const articuloExcelEditar = async (req, res) => {
 
   try {
     // Mapear las actualizaciones en un arreglo de promesas, asi es mas rapido y no actualiza uno por uno
-    const updates = await Promise.all(articulos.map(async (articulo) => {
-      const precioRedondeado = parseFloat(articulo.precio).toFixed(3);
-      await Articulo.update(
-        {
-          precio: precioRedondeado,
-        },
-        {
-          where: {
-            codigo_buscador: String(articulo.codigo),
+    const updates = await Promise.all(
+      articulos.map(async (articulo) => {
+        const precioRedondeado = parseFloat(articulo.precio).toFixed(3);
+        await Articulo.update(
+          {
+            precio: precioRedondeado,
           },
-          transaction: transaccion, // Asociar la transacción a la actualización
-        }
-      );
+          {
+            where: {
+              codigo_buscador: String(articulo.codigo),
+            },
+            transaction: transaccion, // Asociar la transacción a la actualización
+          }
+        );
 
-      return {
-        ...articulo,
-        precio: precioRedondeado
-      };
-    }));
-    
+        return {
+          ...articulo,
+          precio: precioRedondeado,
+        };
+      })
+    );
+
     // Confirmar la transacción (todas las actualizaciones se aplicarán)
     await transaccion.commit();
     // Si llegas a este punto, significa que todas las actualizaciones se realizaron con éxito
 
     // Aca, updates es un arreglo de promesas, por lo que no te va a devolver nada para devolver al front, en ese caso se tendria que poner un return articulo dentro del .map
-    return res.status(200).json({ msg: `Artículos actualizados con éxito.`, updates });
+    return res
+      .status(200)
+      .json({ msg: `Artículos actualizados con éxito.`, updates });
   } catch (error) {
     // Si ocurre un error, hacer un rollback de la transacción para deshacer todas las actualizaciones
     console.log(error);
     await transaccion.rollback();
     return res.status(500).json({ msg: error.message });
   }
-}
+};
 
 // Actualizar los importes desde boton
 const actualizarPrecios = async (req, res) => {
   const articulosFront = req.body;
 
-    // Iniciar una transacción
+  // Iniciar una transacción
   const transaccion = await sequelize.transaction();
 
-  const articulos_a_modificar = articulosFront.map(articulo => {
+  const articulos_a_modificar = articulosFront.map((articulo) => {
     return {
       id: articulo.id,
       codigo_buscador: articulo.codigo_buscador,
-      precio: articulo.precio
-    }
+      precio: articulo.precio,
+    };
   });
 
   try {
-    const updates = await Promise.all(articulos_a_modificar.map(async (articulo) => {
-      await Articulo.update(
-        {
-          precio: articulo.precio // Nuevo precio que viene desde el front
-        },
-        {
-          where: {
-            codigo_buscador: articulo.codigo_buscador // Selecciono los registros que coinciden con los códigos que vienen desde el front
+    const updates = await Promise.all(
+      articulos_a_modificar.map(async (articulo) => {
+        await Articulo.update(
+          {
+            precio: articulo.precio, // Nuevo precio que viene desde el front
           },
-          transaction: transaccion, // Asociar la transacción a la actualización
-        }
-      );
+          {
+            where: {
+              codigo_buscador: articulo.codigo_buscador, // Selecciono los registros que coinciden con los códigos que vienen desde el front
+            },
+            transaction: transaccion, // Asociar la transacción a la actualización
+          }
+        );
 
-      // Confirmar la transacción (todas las actualizaciones se aplicarán)
-      
-      return articulo;
-    }));
-  
+        // Confirmar la transacción (todas las actualizaciones se aplicarán)
+
+        return articulo;
+      })
+    );
+
     await transaccion.commit();
-    
-    return res.json({msg: "Los articulos se actualizaron exitosamente!", updates});
+
+    return res.json({
+      msg: "Los articulos se actualizaron exitosamente!",
+      updates,
+    });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     await transaccion.rollback();
     return res.status(500).json({ msg: error.message, error });
   }
-}
+};
 
 const buscarCodigoBarra = async (req, res) => {
   const { filtro: codigo_barra } = req.body; //Viene como filtro pero se pasa a codigoBarra
-  
+
   try {
     const respuesta = await Articulo.findOne({
       where: {
-        codigo_barra: codigo_barra
+        codigo_barra: codigo_barra,
       },
-    })
+    });
 
     if (!respuesta) {
-      return res.json({msg: "El código de barra no existe"})
+      return res.json({ msg: "El código de barra no existe" });
     }
 
     //Se trae la descripcion del tipo de articulo
     const respuestaTipo = await TipoArticulo.findOne({
       where: {
-        id: respuesta.dataValues.id_tipoArticuloFK
+        id: respuesta.dataValues.id_tipoArticuloFK,
       },
-    })
-    
+    });
+
     //Este articulo se devuelve al front con el tipo de articulo de la descripcion
     const articulo = {
       id: respuesta.dataValues.id,
@@ -359,15 +379,15 @@ const buscarCodigoBarra = async (req, res) => {
       color: respuesta.dataValues.color,
       codigo_buscador: respuesta.dataValues.codigo_buscador,
       stock: respuesta.dataValues.stock,
-      tipoArticulo: respuestaTipo.dataValues.descripcion
-    }
+      tipoArticulo: respuestaTipo.dataValues.descripcion,
+    };
 
     return res.json(articulo);
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(401).json({ msg: error.message });
   }
-}
+};
 
 export {
   altaExcelArticulo,
@@ -377,5 +397,5 @@ export {
   eliminarArticulo,
   articuloExcelEditar,
   actualizarPrecios,
-  buscarCodigoBarra
+  buscarCodigoBarra,
 };
