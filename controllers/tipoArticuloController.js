@@ -37,7 +37,9 @@ const altaTipoArticuloExcel = async (req, res) => {
 
 const listadoTipoArticulo = async (req, res) => {
   try {
-    const respuesta = await TipoArticulo.findAll();
+    const respuesta = await TipoArticulo.findAll({
+      order: [['descripcion', 'ASC']], // 'nombre' es la columna por la que deseas ordenar, 'ASC' para ordenar de la A a la Z
+    });
     res.json(respuesta);
   } catch (error) {
     return res.status(401).json({ msg: error.message });
