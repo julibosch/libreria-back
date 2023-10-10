@@ -75,17 +75,19 @@ const altaArticulo = async (req, res) => {
 
   //Nos traemos el id del tipo de articulo y ademas validamos que exista en la base de datos.
   try {
-    const { dataValues } = await TipoArticulo.findOne({
+    const respuesta = await TipoArticulo.findOne({
       where: {
         descripcion: tipoArticulo,
       },
     });
 
-    idTipoArticulo = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
-
-    if (!idTipoArticulo) {
+    //Si alicia escribe en el input y no selecciona ninguna tipo de articulo existente.
+    if (!respuesta) {
       return res.status(500).json({ msg: "No existe ese tipo de articulo" });
     }
+
+    idTipoArticulo = respuesta.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
+
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
