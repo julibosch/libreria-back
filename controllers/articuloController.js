@@ -1,6 +1,7 @@
 import Articulo from "../models/Articulo.js";
 import TipoArticulo from "../models/TipoArticulo.js";
 import sequelize from "../config/db.js";
+import { buildPDF } from "../libs/pdfKit.js";
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
@@ -391,6 +392,23 @@ const buscarCodigoBarra = async (req, res) => {
   }
 };
 
+const generarPDF = async (req, res) => {
+  // console.log(req.body)
+  const {articulosSeleccionados, tituloPDF} = req.body;
+
+  const stream = res.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename=${tituloPDF}.pdf`,
+  })
+
+  buildPDF(
+    (data) => stream.write(data),
+    () => stream.end(),
+    articulosSeleccionados,
+    tituloPDF
+  );
+}
+
 export {
   altaExcelArticulo,
   altaArticulo,
@@ -400,4 +418,5 @@ export {
   articuloExcelEditar,
   actualizarPrecios,
   buscarCodigoBarra,
+  generarPDF
 };
