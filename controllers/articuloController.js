@@ -42,17 +42,6 @@ const altaExcelArticulo = async (req, res) => {
 };
 
 const altaArticulo = async (req, res) => {
-    const consultaSQL = "UPDATE articulos SET codigo_buscador = REPLACE(codigo_buscador,' ','');";
-
-    try {
-      const update = await Articulo.sequelize.query(consultaSQL, {
-        type: Articulo.sequelize.QueryTypes.UPDATE, // Tipo de consulta
-      });
-      console.log("Filas afectadas:", update[1]);
-    } catch (error) {
-      console.error("Error al ejecutar la consulta:", error);
-    }
-  return;
   const {
     codigo,
     descripcion,
