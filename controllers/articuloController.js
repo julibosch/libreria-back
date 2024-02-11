@@ -1,6 +1,8 @@
 import Articulo from "../models/Articulo.js";
 import TipoArticulo from "../models/TipoArticulo.js";
 import sequelize from "../config/db.js";
+import { QueryTypes } from 'sequelize'
+import ExcelJS from 'exceljs';
 import { buildPDF } from "../libs/pdfKit.js";
 
 const altaExcelArticulo = async (req, res) => {
@@ -394,7 +396,7 @@ const buscarCodigoBarra = async (req, res) => {
 
 const generarPDF = async (req, res) => {
   // console.log(req.body)
-  const {articulosSeleccionados, tituloPDF} = req.body;
+  const { articulosSeleccionados, tituloPDF } = req.body;
 
   const stream = res.writeHead(200, {
     "Content-Type": "application/pdf",
@@ -409,6 +411,49 @@ const generarPDF = async (req, res) => {
   );
 }
 
+const backupManuales = async (req, res) => {
+  try {
+    const articulosManuales = await sequelize.query(`SELECT codigo_buscador, descripcion, precio, stock, color, codigo_barra, id_tipoArticuloFK 
+    FROM articulos
+    WHERE codigo_buscador REGEXP '[a-zA-Z]'`,
+    {type: QueryTypes.SELECT});
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Articulos');
+
+    // Añadir encabezados de columna
+    worksheet.addRow(['descripcion', 'codigo_barra', 'codigo_buscador', 'precio', 'color', 'id_tipoArticuloFK', 'stock']);
+
+    // Añadir filas de datos
+    articulosManuales.forEach(articuloManual => {
+      worksheet.addRow([articuloManual.descripcion, articuloManual.codigo_barra, articuloManual.codigo_buscador, articuloManual.precio, articuloManual.color, articuloManual.id_tipoArticuloFK, articuloManual.stock]);
+    });
+
+    // Obtener la fecha actual
+    const today = new Date();
+
+    // Obtener el día, mes y año
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+
+    // Formatear la fecha como "dd-mm-aaaa"
+    const formattedDate = `${day}-${month}-${year}`;
+
+    // Generar el nombre del archivo con la fecha formateada
+    const fileName = `backup-${formattedDate}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+    await workbook.xlsx.write(res);
+
+    return res.end();
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).send({ message: "Ha ocurrido un error de servidor :(" });
+  }
+}
+
 export {
   altaExcelArticulo,
   altaArticulo,
@@ -418,5 +463,6 @@ export {
   articuloExcelEditar,
   actualizarPrecios,
   buscarCodigoBarra,
-  generarPDF
+  generarPDF,
+  backupManuales
 };
