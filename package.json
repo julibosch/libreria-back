@@ -12,8 +12,10 @@
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "mysql2": "^3.5.2",
+    "mysqldump": "^3.2.0",
     "pdfkit": "^0.13.0",
     "pdfkit-table": "^0.1.99",
     "sequelize": "^6.32.1"
