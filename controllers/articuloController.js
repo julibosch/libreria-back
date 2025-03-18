@@ -1,9 +1,10 @@
 import Articulo from "../models/Articulo.js";
 import TipoArticulo from "../models/TipoArticulo.js";
 import sequelize from "../config/db.js";
-import { QueryTypes } from 'sequelize'
-import ExcelJS from 'exceljs';
+import { QueryTypes } from "sequelize";
+import ExcelJS from "exceljs";
 import { buildPDF } from "../libs/pdfKit.js";
+import Proveedor from "../models/Proveedor.js";
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
@@ -52,6 +53,7 @@ const altaArticulo = async (req, res) => {
     tipoArticulo,
     stock,
     color,
+    proveedor,
   } = req.body;
 
   try {
@@ -71,6 +73,7 @@ const altaArticulo = async (req, res) => {
   }
 
   let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
+  let idProveedor = ""; //Va a contener el id del tipo de articulo
 
   if (!tipoArticulo) {
     return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
@@ -84,13 +87,22 @@ const altaArticulo = async (req, res) => {
       },
     });
 
-    //Si alicia escribe en el input y no selecciona ninguna tipo de articulo existente.
+    const respuestaProveedor = await Proveedor.findOne({
+      where: {
+        descripcion: proveedor,
+      },
+    });
+
     if (!respuesta) {
       return res.status(500).json({ msg: "No existe ese tipo de articulo" });
     }
 
-    idTipoArticulo = respuesta.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
+    if (!respuestaProveedor) {
+      return res.status(500).json({ msg: "No existe ese proveedor" });
+    }
 
+    idTipoArticulo = respuesta.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
+    idProveedor = respuestaProveedor.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
@@ -104,11 +116,13 @@ const altaArticulo = async (req, res) => {
       stock,
       color,
       id_tipoArticuloFK: idTipoArticulo,
+      id_proveedorFK: idProveedor,
     });
     return res.json({
       respuesta,
       msg: "Artículo creado con exito",
       descripcionTipoArticulo: tipoArticulo,
+      descripcionProveedor: proveedor,
     });
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -117,80 +131,92 @@ const altaArticulo = async (req, res) => {
 
 // EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
-  const { codigo } = req.params; //Codigo original
-  const { descripcion, precio, codigoBarra, tipoArticulo, stock, color } =
-    req.body;
-
-  let idTipoArticulo;
+  const { codigo } = req.params; // Código original
+  const {
+    descripcion,
+    precio,
+    codigoBarra,
+    tipoArticulo,
+    stock,
+    color,
+    proveedor,
+  } = req.body;
 
   try {
-    const respuesta = await Articulo.findAll({
-      where: {
-        codigo_buscador: codigo,
-      },
+    // 1️⃣ Verificar si el artículo existe
+    const articulo = await Articulo.findOne({
+      where: { codigo_buscador: codigo },
     });
 
-    if (!respuesta) {
+    if (!articulo) {
       return res.status(404).json({ msg: "Artículo no encontrado" });
     }
-  } catch (error) {
-    return res.status(500).json({ msg: error.message });
-  }
 
-  try {
-    const { dataValues } = await TipoArticulo.findOne({
-      where: {
-        descripcion: tipoArticulo,
-      },
+    // 2️⃣ Obtener ID del Tipo de Artículo
+    const tipoArticuloEncontrado = await TipoArticulo.findOne({
+      where: { descripcion: tipoArticulo },
     });
 
-    idTipoArticulo = dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
-
-    if (!idTipoArticulo) {
-      return res.status(500).json({ msg: "No existe ese tipo de articulo" });
+    if (!tipoArticuloEncontrado) {
+      return res.status(400).json({ msg: "No existe ese tipo de artículo" });
     }
-  } catch (error) {
-    return res.status(500).json({ msg: error.message });
-  }
+    const idTipoArticulo = tipoArticuloEncontrado.id;
 
-  try {
-    const respuesta = await Articulo.update(
+    // 3️⃣ Obtener ID del Proveedor
+    const proveedorEncontrado = await Proveedor.findOne({
+      where: { descripcion: proveedor },
+    });
+
+    if (!proveedorEncontrado) {
+      return res.status(400).json({ msg: "No existe ese proveedor" });
+    }
+    const idProveedor = proveedorEncontrado.id;
+
+    // 4️⃣ Actualizar el artículo
+    await Articulo.update(
       {
-        descripcion: descripcion,
+        descripcion,
         codigo_barra: codigoBarra,
-        precio: precio,
-        color: color,
-        stock: stock,
+        precio: parseFloat(precio).toFixed(3),
+        color,
+        stock: Number(stock),
         id_tipoArticuloFK: idTipoArticulo,
+        id_proveedorFK: idProveedor,
       },
-      {
-        where: {
-          codigo_buscador: codigo,
-        },
-      }
+      { where: { codigo_buscador: codigo } }
     );
 
-    const articuloActualizado = {
-      codigo_buscador: codigo,
-      descripcion: descripcion,
-      codigo_barra: codigoBarra,
-      precio: parseFloat(precio).toFixed(3),
-      color: color,
-      tipoArticulo: tipoArticulo,
-      stock: Number(stock),
-    };
+    // 5️⃣ Recuperar el artículo actualizado con `updatedAt`
+    const articuloActualizado = await Articulo.findOne({
+      where: { codigo_buscador: codigo },
+      attributes: [
+        "codigo_buscador",
+        "descripcion",
+        "codigo_barra",
+        "precio",
+        "color",
+        "stock",
+        "updatedAt",
+      ],
+    });
 
-    if (respuesta > 0) {
-      return res.json({
-        msg: "Artículo actualizado exitosamente",
-        articuloActualizado,
-        respuesta,
-      });
-    }
-    return res.json({ msg: "No hubo modificaciones", respuesta });
+    return res.json({
+      msg: "Artículo actualizado exitosamente",
+      articuloActualizado: {
+        codigo_buscador: articuloActualizado.codigo_buscador,
+        descripcion: articuloActualizado.descripcion,
+        codigo_barra: articuloActualizado.codigo_barra,
+        precio: articuloActualizado.precio,
+        color: articuloActualizado.color,
+        tipoArticulo,
+        proveedor,
+        stock: articuloActualizado.stock,
+        updatedAt: articuloActualizado.updatedAt,
+      },
+    });
   } catch (error) {
-    console.log(error);
-    return res.status(401).json({ msg: error.message });
+    console.error("Error en editarArticulo:", error);
+    return res.status(500).json({ msg: "Error interno del servidor" });
   }
 };
 
@@ -205,10 +231,14 @@ const listadoArticulo = async (req, res) => {
       codigo_buscador,
       codigo_barra,
       stock,
-      tipo_articulos.descripcion AS tipoArticulo
+      tipo_articulos.descripcion AS tipoArticulo,
+      proveedores.descripcion AS proveedor,
+      articulos.updatedAt as updatedAt
     FROM articulos
     INNER JOIN tipo_articulos
     ON articulos.id_tipoArticuloFK = tipo_articulos.id
+    INNER JOIN proveedores
+    ON articulos.id_proveedorFK = proveedores.id
     GROUP BY codigo_buscador
     ORDER BY
     CAST(SUBSTRING_INDEX(codigo_buscador, ' ', 1) AS SIGNED) ASC,
@@ -221,9 +251,10 @@ const listadoArticulo = async (req, res) => {
     const respuesta = await Articulo.sequelize.query(consultaSQL, {
       type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
       include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
+      include: Proveedor, // Incluye el modelo Proveedor en la consulta
     });
 
-    res.json(respuesta);
+    return res.json(respuesta);
   } catch (error) {
     console.log(error);
     return res.status(401).json({ msg: error.message });
@@ -401,7 +432,7 @@ const generarPDF = async (req, res) => {
   const stream = res.writeHead(200, {
     "Content-Type": "application/pdf",
     "Content-Disposition": `attachment; filename=${tituloPDF}.pdf`,
-  })
+  });
 
   buildPDF(
     (data) => stream.write(data),
@@ -409,32 +440,51 @@ const generarPDF = async (req, res) => {
     articulosSeleccionados,
     tituloPDF
   );
-}
+};
 
 const backupManuales = async (req, res) => {
   try {
-    const articulosManuales = await sequelize.query(`SELECT codigo_buscador, descripcion, precio, stock, color, codigo_barra, id_tipoArticuloFK 
-    FROM articulos
-    WHERE codigo_buscador REGEXP '[a-zA-Z]'`,
-    {type: QueryTypes.SELECT});
+    const articulosManuales = await sequelize.query(
+      `SELECT id, codigo_buscador, descripcion, precio, stock, color, codigo_barra, id_tipoArticuloFK 
+    FROM articulos`,
+      { type: QueryTypes.SELECT }
+    );
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Articulos');
+    const worksheet = workbook.addWorksheet("Articulos");
 
     // Añadir encabezados de columna
-    worksheet.addRow(['descripcion', 'codigo_barra', 'codigo_buscador', 'precio', 'color', 'id_tipoArticuloFK', 'stock']);
+    worksheet.addRow([
+      "id",
+      "descripcion",
+      "codigo_barra",
+      "codigo_buscador",
+      "precio",
+      "color",
+      "id_tipoArticuloFK",
+      "stock",
+    ]);
 
     // Añadir filas de datos
-    articulosManuales.forEach(articuloManual => {
-      worksheet.addRow([articuloManual.descripcion, articuloManual.codigo_barra, articuloManual.codigo_buscador, articuloManual.precio, articuloManual.color, articuloManual.id_tipoArticuloFK, articuloManual.stock]);
+    articulosManuales.forEach((articuloManual) => {
+      worksheet.addRow([
+        articuloManual.id,
+        articuloManual.descripcion,
+        articuloManual.codigo_barra,
+        articuloManual.codigo_buscador,
+        articuloManual.precio,
+        articuloManual.color,
+        articuloManual.id_tipoArticuloFK,
+        articuloManual.stock,
+      ]);
     });
 
     // Obtener la fecha actual
     const today = new Date();
 
     // Obtener el día, mes y año
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
     const year = today.getFullYear();
 
     // Formatear la fecha como "dd-mm-aaaa"
@@ -443,16 +493,21 @@ const backupManuales = async (req, res) => {
     // Generar el nombre del archivo con la fecha formateada
     const fileName = `backup-${formattedDate}.xlsx`;
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
     await workbook.xlsx.write(res);
 
     return res.end();
   } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).send({ message: "Ha ocurrido un error de servidor :(" });
+    console.error("Error:", error);
+    return res
+      .status(500)
+      .send({ message: "Ha ocurrido un error de servidor :(" });
   }
-}
+};
 
 export {
   altaExcelArticulo,
@@ -464,5 +519,5 @@ export {
   actualizarPrecios,
   buscarCodigoBarra,
   generarPDF,
-  backupManuales
+  backupManuales,
 };
