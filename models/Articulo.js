@@ -1,6 +1,7 @@
 import Sequelize from "sequelize";
 import db from "../config/db.js";
 import Proveedor from "./Proveedor.js";
+import TipoArticulo from "./TipoArticulo.js"; // Importamos el modelo de tipo de artículos
 
 const Articulo = db.define(
   "articulos",
@@ -32,27 +33,24 @@ const Articulo = db.define(
     id_tipoArticuloFK: {
       type: Sequelize.INTEGER,
       allowNull: false,
-      references: {
-        model: "tipo_articulos", // Nombre de la tabla referenciada
-        key: "id", // Nombre de la columna referenciada en la tabla tipo_articulos
-      },
     },
     id_proveedorFK: {
       type: Sequelize.INTEGER,
+      allowNull: true,
       references: {
         model: Proveedor,
         key: "id",
       },
-      onDelete: "SET NULL", // O "CASCADE"
+      onDelete: "SET NULL",
       onUpdate: "CASCADE",
     },
     createdAt: {
       type: Sequelize.DATE,
-      allowNull: true, // ✅ Permite valores NULL
+      allowNull: true,
     },
     updatedAt: {
       type: Sequelize.DATE,
-      allowNull: true, // ✅ Permite valores NULL
+      allowNull: true,
     },
   },
   {

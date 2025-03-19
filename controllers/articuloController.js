@@ -1,10 +1,11 @@
-import Articulo from "../models/Articulo.js";
-import TipoArticulo from "../models/TipoArticulo.js";
+// import Articulo from "../models/Articulo.js";
+// import TipoArticulo from "../models/TipoArticulo.js";
 import sequelize from "../config/db.js";
 import { QueryTypes } from "sequelize";
 import ExcelJS from "exceljs";
 import { buildPDF } from "../libs/pdfKit.js";
-import Proveedor from "../models/Proveedor.js";
+// import Proveedor from "../models/Proveedor.js";
+import { Articulo, Proveedor, TipoArticulo } from "../models/Associaciones.js"; // ✅ Importamos desde asociaciones
 
 const altaExcelArticulo = async (req, res) => {
   const articulos = req.body;
@@ -45,105 +46,122 @@ const altaExcelArticulo = async (req, res) => {
 };
 
 const altaArticulo = async (req, res) => {
-  const {
-    codigo,
-    descripcion,
-    precio,
-    codigoBarra,
-    tipoArticulo,
-    stock,
-    color,
-    proveedor,
-  } = req.body;
-
   try {
-    const articuloEncontrado = await Articulo.findOne({
-      where: {
-        codigo_buscador: String(codigo),
-      },
-    });
-
-    if (articuloEncontrado) {
-      return res
-        .status(401)
-        .json({ msg: "Ya existe un artículo con ese código." });
-    }
-  } catch (error) {
-    console.log(error);
-  }
-
-  let idTipoArticulo = ""; //Va a contener el id del tipo de articulo
-  let idProveedor = ""; //Va a contener el id del tipo de articulo
-
-  if (!tipoArticulo) {
-    return res.status(401).json({ msg: "Debe ingresar un tipo de artículo" });
-  }
-
-  //Nos traemos el id del tipo de articulo y ademas validamos que exista en la base de datos.
-  try {
-    const respuesta = await TipoArticulo.findOne({
-      where: {
-        descripcion: tipoArticulo,
-      },
-    });
-
-    const respuestaProveedor = await Proveedor.findOne({
-      where: {
-        descripcion: proveedor,
-      },
-    });
-
-    if (!respuesta) {
-      return res.status(500).json({ msg: "No existe ese tipo de articulo" });
-    }
-
-    if (!respuestaProveedor) {
-      return res.status(500).json({ msg: "No existe ese proveedor" });
-    }
-
-    idTipoArticulo = respuesta.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
-    idProveedor = respuestaProveedor.dataValues.id; //Le paso el id del tipo articulo a una variable global, porque sino no puedo usar datavalues por el scop
-  } catch (error) {
-    return res.status(500).json({ msg: error.message });
-  }
-
-  try {
-    const respuesta = await Articulo.create({
-      codigo_buscador: codigo,
+    const {
+      codigo,
       descripcion,
       precio,
-      codigo_barra: codigoBarra,
+      codigoBarra,
+      tipoArticulo,
       stock,
       color,
-      id_tipoArticuloFK: idTipoArticulo,
-      id_proveedorFK: idProveedor,
+      proveedor,
+    } = req.body;
+
+    // 1️⃣ Validar datos obligatorios
+    if (
+      !codigo ||
+      !descripcion ||
+      !precio ||
+      !codigoBarra ||
+      !tipoArticulo ||
+      !stock ||
+      !color ||
+      !proveedor
+    ) {
+      return res.status(400).json({ msg: "Faltan datos obligatorios" });
+    }
+
+    // 2️⃣ Convertir `precio` y `stock` a número para evitar errores
+    const precioNumerico = parseFloat(precio);
+    const stockNumerico = parseInt(stock, 10);
+
+    if (isNaN(precioNumerico) || isNaN(stockNumerico)) {
+      return res.status(400).json({ msg: "Precio o stock inválidos" });
+    }
+
+    // 3️⃣ Buscar o crear el artículo con `findOrCreate`
+    const [articulo, created] = await Articulo.findOrCreate({
+      where: { codigo_buscador: String(codigo) },
+      defaults: {
+        descripcion,
+        precio: precioNumerico.toFixed(3),
+        codigo_barra: codigoBarra,
+        stock: stockNumerico,
+        color,
+        id_tipoArticuloFK: tipoArticulo.id,
+        id_proveedorFK: proveedor.id,
+      },
     });
+
+    if (!created) {
+      return res
+        .status(400)
+        .json({ msg: "Ya existe un artículo con ese código." });
+    }
+
+    // 4️⃣ Recuperar el artículo con sus relaciones
+    const respuesta = await Articulo.findOne({
+      where: { codigo_buscador: codigo },
+      include: [
+        {
+          model: TipoArticulo,
+          as: "tipoArticulo",
+          attributes: ["id", "descripcion"],
+        },
+        {
+          model: Proveedor,
+          as: "proveedor",
+          attributes: ["id", "descripcion"],
+        },
+      ],
+    });
+
     return res.json({
+      msg: "Artículo creado con éxito",
       respuesta,
-      msg: "Artículo creado con exito",
-      descripcionTipoArticulo: tipoArticulo,
-      descripcionProveedor: proveedor,
     });
   } catch (error) {
-    res.status(500).json({ msg: error.message });
+    console.error("Error en altaArticulo:", error);
+    return res.status(500).json({ msg: "Error interno del servidor" });
   }
 };
 
-// EDITAR ARTICULO
 const editarArticulo = async (req, res) => {
-  const { codigo } = req.params; // Código original
-  const {
-    descripcion,
-    precio,
-    codigoBarra,
-    tipoArticulo,
-    stock,
-    color,
-    proveedor,
-  } = req.body;
-
   try {
-    // 1️⃣ Verificar si el artículo existe
+    const { codigo } = req.params; // Código original
+    const {
+      descripcion,
+      precio,
+      codigoBarra,
+      tipoArticulo,
+      stock,
+      color,
+      proveedor,
+    } = req.body;
+
+    // 1️⃣ Validar datos obligatorios
+    if (
+      !descripcion ||
+      !precio ||
+      !codigoBarra ||
+      !tipoArticulo ||
+      !stock ||
+      !color ||
+      !proveedor
+    ) {
+      return res.status(400).json({ msg: "Faltan datos obligatorios" });
+    }
+
+    // 2️⃣ Convertir `precio` y `stock` a número para evitar errores
+    const precioNumerico = parseFloat(precio);
+    const stockNumerico = parseInt(stock, 10);
+
+    if (isNaN(precioNumerico) || isNaN(stockNumerico)) {
+      return res.status(400).json({ msg: "Precio o stock inválidos" });
+    }
+
+    // 3️⃣ Verificar si el artículo existe
     const articulo = await Articulo.findOne({
       where: { codigo_buscador: codigo },
     });
@@ -152,67 +170,38 @@ const editarArticulo = async (req, res) => {
       return res.status(404).json({ msg: "Artículo no encontrado" });
     }
 
-    // 2️⃣ Obtener ID del Tipo de Artículo
-    const tipoArticuloEncontrado = await TipoArticulo.findOne({
-      where: { descripcion: tipoArticulo },
-    });
-
-    if (!tipoArticuloEncontrado) {
-      return res.status(400).json({ msg: "No existe ese tipo de artículo" });
-    }
-    const idTipoArticulo = tipoArticuloEncontrado.id;
-
-    // 3️⃣ Obtener ID del Proveedor
-    const proveedorEncontrado = await Proveedor.findOne({
-      where: { descripcion: proveedor },
-    });
-
-    if (!proveedorEncontrado) {
-      return res.status(400).json({ msg: "No existe ese proveedor" });
-    }
-    const idProveedor = proveedorEncontrado.id;
-
     // 4️⃣ Actualizar el artículo
     await Articulo.update(
       {
         descripcion,
         codigo_barra: codigoBarra,
-        precio: parseFloat(precio).toFixed(3),
+        precio: precioNumerico.toFixed(3),
         color,
-        stock: Number(stock),
-        id_tipoArticuloFK: idTipoArticulo,
-        id_proveedorFK: idProveedor,
+        stock: stockNumerico,
+        id_tipoArticuloFK: tipoArticulo.id,
+        id_proveedorFK: proveedor.id,
       },
       { where: { codigo_buscador: codigo } }
     );
 
-    // 5️⃣ Recuperar el artículo actualizado con `updatedAt`
+    // 5️⃣ Recuperar el artículo actualizado con sus relaciones
     const articuloActualizado = await Articulo.findOne({
       where: { codigo_buscador: codigo },
-      attributes: [
-        "codigo_buscador",
-        "descripcion",
-        "codigo_barra",
-        "precio",
-        "color",
-        "stock",
-        "updatedAt",
+      include: [
+        {
+          model: TipoArticulo,
+          as: "tipoArticulo",
+        },
+        {
+          model: Proveedor,
+          as: "proveedor",
+        },
       ],
     });
 
     return res.json({
       msg: "Artículo actualizado exitosamente",
-      articuloActualizado: {
-        codigo_buscador: articuloActualizado.codigo_buscador,
-        descripcion: articuloActualizado.descripcion,
-        codigo_barra: articuloActualizado.codigo_barra,
-        precio: articuloActualizado.precio,
-        color: articuloActualizado.color,
-        tipoArticulo,
-        proveedor,
-        stock: articuloActualizado.stock,
-        updatedAt: articuloActualizado.updatedAt,
-      },
+      articuloActualizado,
     });
   } catch (error) {
     console.error("Error en editarArticulo:", error);
@@ -222,36 +211,18 @@ const editarArticulo = async (req, res) => {
 
 // LISTADO DE ARTICULOS
 const listadoArticulo = async (req, res) => {
-  const consultaSQL = `
-    SELECT
-      articulos.descripcion AS descripcion,
-      articulos.id AS id,
-      color,
-      precio,
-      codigo_buscador,
-      codigo_barra,
-      stock,
-      tipo_articulos.descripcion AS tipoArticulo,
-      proveedores.descripcion AS proveedor,
-      articulos.updatedAt as updatedAt
-    FROM articulos
-    INNER JOIN tipo_articulos
-    ON articulos.id_tipoArticuloFK = tipo_articulos.id
-    INNER JOIN proveedores
-    ON articulos.id_proveedorFK = proveedores.id
-    GROUP BY codigo_buscador
-    ORDER BY
-    CAST(SUBSTRING_INDEX(codigo_buscador, ' ', 1) AS SIGNED) ASC,
-    SUBSTRING_INDEX(codigo_buscador, ' ', -1) ASC;
-  `;
   try {
-    await sequelize.query(
-      "SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
-    );
-    const respuesta = await Articulo.sequelize.query(consultaSQL, {
-      type: Articulo.sequelize.QueryTypes.SELECT, // Tipo de consulta
-      include: TipoArticulo, // Incluye el modelo TipoArticulo en la consulta
-      include: Proveedor, // Incluye el modelo Proveedor en la consulta
+    const respuesta = await Articulo.findAll({
+      include: [
+        {
+          model: TipoArticulo,
+          as: "tipoArticulo",
+        },
+        {
+          model: Proveedor,
+          as: "proveedor",
+        },
+      ],
     });
 
     return res.json(respuesta);
@@ -386,42 +357,49 @@ const actualizarPrecios = async (req, res) => {
 };
 
 const buscarCodigoBarra = async (req, res) => {
-  const { filtro: codigo_barra } = req.body; //Viene como filtro pero se pasa a codigoBarra
-
   try {
-    const respuesta = await Articulo.findOne({
-      where: {
-        codigo_barra: codigo_barra,
-      },
-    });
+    const { filtro: codigo_barra } = req.body; // Se recibe como `filtro` y se mapea a `codigo_barra`
 
-    if (!respuesta) {
-      return res.json({ msg: "El código de barra no existe" });
+    // 1️⃣ Validar que se ingrese un código de barras
+    if (!codigo_barra) {
+      return res
+        .status(400)
+        .json({ msg: "Debe ingresar un código de barras válido" });
     }
 
-    //Se trae la descripcion del tipo de articulo
-    const respuestaTipo = await TipoArticulo.findOne({
-      where: {
-        id: respuesta.dataValues.id_tipoArticuloFK,
-      },
+    // 2️⃣ Buscar el artículo junto con el tipo de artículo
+    const articulo = await Articulo.findOne({
+      where: { codigo_barra },
+      include: [
+        {
+          model: TipoArticulo,
+          as: "tipoArticulo",
+        },
+        {
+          model: Proveedor,
+          as: "proveedor",
+        },
+      ],
     });
 
-    //Este articulo se devuelve al front con el tipo de articulo de la descripcion
-    const articulo = {
-      id: respuesta.dataValues.id,
-      descripcion: respuesta.dataValues.descripcion,
-      codigo_barra: respuesta.dataValues.codigo_barra,
-      precio: respuesta.dataValues.precio,
-      color: respuesta.dataValues.color,
-      codigo_buscador: respuesta.dataValues.codigo_buscador,
-      stock: respuesta.dataValues.stock,
-      tipoArticulo: respuestaTipo.dataValues.descripcion,
-    };
+    if (!articulo) {
+      return res.status(404).json({ msg: "El código de barra no existe" });
+    }
 
-    return res.json(articulo);
+    return res.json({
+      id: articulo.id,
+      descripcion: articulo.descripcion,
+      codigo_barra: articulo.codigo_barra,
+      precio: articulo.precio,
+      color: articulo.color,
+      codigo_buscador: articulo.codigo_buscador,
+      stock: articulo.stock,
+      tipoArticulo: articulo.tipoArticulo,
+      proveedor: articulo.proveedor,
+    });
   } catch (error) {
-    console.log(error);
-    return res.status(401).json({ msg: error.message });
+    console.error("Error en buscarCodigoBarra:", error);
+    return res.status(500).json({ msg: "Error interno del servidor" });
   }
 };
 
